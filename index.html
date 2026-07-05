@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>The PyleaMUN Word Search</title>
+  <style>
+    :root {
+      --ink: #102033;
+      --muted: #5d6880;
+      --white: #ffffff;
+      --panel: rgba(255, 255, 255, 0.74);
+      --panel-strong: rgba(255, 255, 255, 0.9);
+      --blue: #0b6bff;
+      --cyan: #00c2ff;
+      --purple: #7c3cff;
+      --pink: #ff4fa3;
+      --orange: #ff9f1c;
+      --green: #22c55e;
+      --lime: #b6ff4d;
+      --yellow: #ffe45e;
+      --found-bg: #bcf7d2;
+      --found-ink: #07543a;
+      --select-bg: #fff176;
+      --line: rgba(16, 32, 51, 0.12);
+      --shadow: 0 24px 70px rgba(26, 31, 54, 0.18);
+      --soft-shadow: 0 12px 28px rgba(26, 31, 54, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overscroll-behavior: none;
+      background:
+        radial-gradient(circle at 8% 10%, rgba(255, 79, 163, 0.40), transparent 22rem),
+        radial-gradient(circle at 92% 8%, rgba(0, 194, 255, 0.38), transparent 24rem),
+        radial-gradient(circle at 78% 86%, rgba(124, 60, 255, 0.32), transparent 26rem),
+        radial-gradient(circle at 12% 92%, rgba(255, 159, 28, 0.38), transparent 22rem),
+        linear-gradient(135deg, #edf7ff 0%, #fff2fb 48%, #fff9e8 100%);
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .app {
+      width: min(100%, 1100px);
+      position: relative;
+      border-radius: 30px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.72);
+      background: rgba(255, 255, 255, 0.52);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .app::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.28), transparent 26%, rgba(255,255,255,0.26) 72%, transparent),
+        repeating-linear-gradient(135deg, rgba(255,255,255,0.16) 0 1px, transparent 1px 18px);
+      pointer-events: none;
+    }
+
+    .blob {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(1px);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .blob.one {
+      width: 130px;
+      height: 130px;
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      right: -34px;
+      top: 86px;
+    }
+
+    .blob.two {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, var(--pink), var(--orange));
+      left: -30px;
+      top: 235px;
+    }
+
+    .blob.three {
+      width: 150px;
+      height: 150px;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      right: 18px;
+      bottom: -58px;
+      opacity: 0.55;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      padding: 14px 14px 10px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      gap: 14px;
+      align-items: center;
+      padding: 16px;
+      border-radius: 26px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.94), rgba(255,255,255,0.64)),
+        linear-gradient(135deg, rgba(11,107,255,0.15), rgba(255,79,163,0.13));
+      border: 1px solid rgba(255,255,255,0.78);
+      box-shadow: var(--soft-shadow);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -38px;
+      top: -52px;
+      width: 180px;
+      height: 180px;
+      border-radius: 999px;
+      background: conic-gradient(from 120deg, var(--cyan), var(--purple), var(--pink), var(--orange), var(--cyan));
+      opacity: 0.22;
+    }
+
+    .logo-frame {
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      padding: 3px;
+      background: conic-gradient(from 180deg, var(--cyan), var(--purple), var(--pink), var(--orange), var(--cyan));
+      box-shadow: 0 12px 28px rgba(16, 32, 51, 0.18);
+      z-index: 1;
+    }
+
+    .logo-frame img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      border-radius: 50%;
+      background: white;
+      border: 3px solid white;
+    }
+
+    .title-wrap {
+      z-index: 1;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      color: #ffffff;
+      background: linear-gradient(90deg, var(--blue), var(--purple), var(--pink));
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      box-shadow: 0 8px 18px rgba(124, 60, 255, 0.24);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.42rem, 5.8vw, 3rem);
+      line-height: 1;
+      letter-spacing: -0.045em;
+      color: #102033;
+      text-wrap: balance;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: clamp(0.88rem, 2.8vw, 1.02rem);
+      line-height: 1.4;
+      font-weight: 650;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .pill, button {
+      min-height: 40px;
+      border-radius: 999px;
+      padding: 9px 14px;
+      border: 1px solid rgba(255,255,255,0.72);
+      font-size: 0.88rem;
+      font-weight: 900;
+      box-shadow: var(--soft-shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      color: var(--ink);
+      background: rgba(255,255,255,0.78);
+    }
+
+    .pill strong {
+      color: var(--blue);
+    }
+
+    button {
+      cursor: pointer;
+      color: white;
+      border: 0;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+    }
+
+    button.secondary {
+      color: var(--ink);
+      background: linear-gradient(135deg, #fff, #fff4cf);
+      border: 1px solid rgba(16, 32, 51, 0.12);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(280px, 0.82fr);
+      gap: 14px;
+      padding: 0 14px 14px;
+      align-items: start;
+    }
+
+    .panel {
+      position: relative;
+      border-radius: 26px;
+      padding: 12px;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.78);
+      box-shadow: var(--soft-shadow);
+      backdrop-filter: blur(14px);
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(0,194,255,0.15), transparent 15rem),
+        radial-gradient(circle at 100% 100%, rgba(255,79,163,0.15), transparent 16rem);
+      pointer-events: none;
+    }
+
+    .panel > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .grid-caption {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 9px;
+      color: var(--ink);
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 950;
+    }
+
+    .grid-caption span {
+      display: inline-flex;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.72);
+    }
+
+    .grid-wrap {
+      width: 100%;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(20, 1fr);
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.92);
+      border: 2px solid rgba(255,255,255,0.95);
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow:
+        inset 0 0 0 1px rgba(16, 32, 51, 0.08),
+        0 18px 38px rgba(16, 32, 51, 0.12);
+    }
+
+    .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid rgba(16, 32, 51, 0.09);
+      border-bottom: 1px solid rgba(16, 32, 51, 0.09);
+      color: #12243a;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: clamp(0.64rem, 3.45vw, 1.34rem);
+      font-weight: 950;
+      line-height: 1;
+      transition: background 0.08s ease, transform 0.08s ease, color 0.08s ease;
+    }
+
+    .cell:nth-child(20n) { border-right: 0; }
+    .cell:nth-last-child(-n + 20) { border-bottom: 0; }
+
+    .cell.selected {
+      background: linear-gradient(135deg, var(--yellow), #ffbe3d);
+      color: #221500;
+      transform: scale(0.92);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.65);
+    }
+
+    .cell.found {
+      background: linear-gradient(135deg, var(--found-bg), var(--lime));
+      color: var(--found-ink);
+    }
+
+    .cell.hint {
+      animation: hintPulse 0.65s ease-in-out 3;
+    }
+
+    @keyframes hintPulse {
+      0%, 100% { background: var(--yellow); transform: scale(1); }
+      50% { background: #ffffff; transform: scale(0.86); }
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .card {
+      padding: 13px;
+      border-radius: 24px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255,255,255,0.78);
+      box-shadow: var(--soft-shadow);
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      right: -28px;
+      bottom: -44px;
+      width: 120px;
+      height: 120px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(0,194,255,0.18), rgba(255,79,163,0.16));
+      pointer-events: none;
+    }
+
+    .card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card h2 {
+      margin: 0 0 6px;
+      font-size: 1.04rem;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+
+    .instructions {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+      font-weight: 650;
+    }
+
+    .definition-box {
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.94), rgba(255,242,251,0.9)),
+        radial-gradient(circle at 0 0, rgba(255,79,163,0.18), transparent 11rem);
+      min-height: 96px;
+    }
+
+    .definition-label {
+      margin: 0 0 7px;
+      display: inline-flex;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--orange), var(--pink));
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 950;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    #definitionText {
+      margin: 0;
+      color: var(--ink);
+      font-size: 1rem;
+      line-height: 1.4;
+      font-weight: 800;
+    }
+
+    .definition-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      max-height: 342px;
+      overflow: auto;
+      scrollbar-width: thin;
+    }
+
+    .definition-list li {
+      padding: 9px 10px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #ffffff, #f3fbff);
+      border: 1px solid rgba(16,32,51,0.1);
+      color: #334155;
+      font-size: 0.86rem;
+      line-height: 1.32;
+      font-weight: 650;
+      box-shadow: 0 8px 14px rgba(16,32,51,0.06);
+    }
+
+    .empty-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-style: italic;
+      font-weight: 650;
+    }
+
+    .complete {
+      display: none;
+      padding: 13px;
+      border-radius: 22px;
+      color: #06381f;
+      background: linear-gradient(135deg, #bbf7d0, #d9ff85);
+      text-align: center;
+      font-weight: 950;
+      box-shadow: var(--soft-shadow);
+    }
+
+    footer {
+      padding: 11px 14px 15px;
+      text-align: center;
+      color: rgba(16,32,51,0.82);
+      font-size: clamp(0.76rem, 2.6vw, 0.92rem);
+      font-weight: 850;
+      background: rgba(255,255,255,0.3);
+      border-top: 1px solid rgba(255,255,255,0.55);
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 6px;
+      }
+
+      .app {
+        border-radius: 22px;
+      }
+
+      header {
+        padding: 9px 9px 7px;
+      }
+
+      .hero {
+        grid-template-columns: 62px 1fr;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 22px;
+      }
+
+      .logo-frame {
+        width: 58px;
+        height: 58px;
+      }
+
+      .eyebrow {
+        font-size: 0.63rem;
+        padding: 4px 8px;
+      }
+
+      h1 {
+        font-size: clamp(1.24rem, 6.2vw, 2rem);
+      }
+
+      .subtitle {
+        font-size: 0.88rem;
+      }
+
+      .stats {
+        gap: 6px;
+        margin-top: 9px;
+      }
+
+      .pill, button {
+        min-height: 36px;
+        padding: 7px 10px;
+        font-size: 0.8rem;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+        gap: 9px;
+        padding: 0 9px 9px;
+      }
+
+      .panel {
+        padding: 8px;
+        border-radius: 22px;
+      }
+
+      .grid {
+        border-radius: 17px;
+      }
+
+      .cell {
+        font-size: clamp(0.52rem, 3.72vw, 0.94rem);
+      }
+
+      .card {
+        border-radius: 20px;
+        padding: 11px;
+      }
+
+      .definition-list {
+        max-height: 210px;
+      }
+    }
+
+    @media (max-width: 390px) {
+      .hero {
+        grid-template-columns: 52px 1fr;
+      }
+
+      .logo-frame {
+        width: 50px;
+        height: 50px;
+      }
+
+      .subtitle {
+        font-size: 0.82rem;
+      }
+
+      .pill, button {
+        font-size: 0.75rem;
+        padding: 7px 9px;
+      }
+
+      .cell {
+        font-size: 0.49rem;
+      }
+
+      #definitionText {
+        font-size: 0.93rem;
+      }
+
+      .definition-list li {
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <span class="blob one"></span>
+    <span class="blob two"></span>
+    <span class="blob three"></span>
+
+    <div class="content">
+      <header>
+        <section class="hero">
+          <div class="logo-frame" aria-hidden="true">
+            <img src="logo.png" alt="PyleaMUN logo" />
+          </div>
+          <div class="title-wrap">
+            <div class="eyebrow">MUN vocabulary challenge</div>
+            <h1>The PyleaMUN Word Search</h1>
+            <p class="subtitle">Find the hidden MUN vocabulary. Every correct word unlocks a definition.</p>
+          </div>
+        </section>
+
+        <div class="stats">
+          <span class="pill" id="targetPill">Words to find: <strong>&nbsp;25</strong></span>
+          <span class="pill" id="foundPill">Found: 0 / 25</span>
+          <button id="resetBtn" type="button">Reset</button>
+          <button id="hintBtn" type="button" class="secondary">Hint</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="panel">
+          <p class="grid-caption"><span>Touch + drag</span><span>Best of Luck!</span></p>
+          <div class="grid-wrap">
+            <div id="grid" class="grid" aria-label="PyleaMUN word search grid"></div>
+          </div>
+        </section>
+
+        <aside class="side-stack">
+          <section class="card">
+            <h2>How to play</h2>
+            <p class="instructions">On a phone, touch the first letter, drag in a straight line, and lift on the final letter. Words can be horizontal, vertical, diagonal, forwards, or backwards.</p>
+          </section>
+
+          <section class="card definition-box" aria-live="polite">
+            <p class="definition-label">Latest definition</p>
+            <p id="definitionText">No definitions unlocked yet.</p>
+          </section>
+
+          <section class="card">
+            <h2>Definitions unlocked</h2>
+            <ul id="definitionList" class="definition-list"></ul>
+            <p id="emptyNote" class="empty-note">Definitions will appear here after correct answers.</p>
+          </section>
+
+          <div id="complete" class="complete">Excellent! All 25 definitions have been unlocked.</div>
+        </aside>
+      </main>
+
+      <footer>Devised by Panagiotis Domvros, President of PyleaMUN</footer>
+    </div>
+  </div>
+
+  <script>
+    const gridLetters = ["ETDFJGEGODCWSBVPAFBF", "PLACARDELEGATENXOZUX", "WOQLODXETGGAUMYGAPJA", "VODDPNIOYTOSOCHAIRJR", "RNUSRYSPVVIAAMUROUQC", "NNOGVOTELGBMYDRSAFII", "JASWMSDRNORLMVNPTZTV", "JPFGYOYAQSMEDOAEEPET", "YECGBZTTSBUAPLCEGXCJ", "FKXNYONIJSPSCOPCVADJ", "SGAIRPGVOZAPLYHHCFCS", "UOTYLHIEANZBLGNSZRSW", "CMABIDEAMENDMENTCLMM", "KIYBXPREAMBULATORYNM", "YKWOLRESOLUTIONAZOMY", "IHILAEVUOUPXMPXZBZRV", "FIEJLGOANWVJYJVJAEIZ", "NEZTCASLZJMTHCPKLIDA", "TIZQDMBCGGJTBFYLAOGP", "DQQGQTWVFWHEQBDFPVVK"];
+    const hiddenTerms = [{"word": "DELEGATE", "definition": "A person representing a country, organisation, or assigned position in committee.", "cells": [[1, 6], [1, 7], [1, 8], [1, 9], [1, 10], [1, 11], [1, 12], [1, 13]]}, {"word": "PLACARD", "definition": "The card showing a delegation’s name, raised to speak or vote.", "cells": [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]]}, {"word": "MOTION", "definition": "A formal proposal made during debate to change what the committee does next.", "cells": [[6, 4], [7, 5], [8, 6], [9, 7], [10, 8], [11, 9]]}, {"word": "CAUCUS", "definition": "A temporary break from formal debate for discussion or negotiation.", "cells": [[0, 10], [1, 11], [2, 12], [3, 13], [4, 14], [5, 15]]}, {"word": "RESOLUTION", "definition": "A formal document that presents proposed solutions to the topic.", "cells": [[14, 5], [14, 6], [14, 7], [14, 8], [14, 9], [14, 10], [14, 11], [14, 12], [14, 13], [14, 14]]}, {"word": "CLAUSE", "definition": "A separate statement or section inside a resolution.", "cells": [[18, 7], [17, 7], [16, 7], [15, 7], [14, 7], [13, 7]]}, {"word": "AMENDMENT", "definition": "A proposed change to a draft resolution.", "cells": [[12, 7], [12, 8], [12, 9], [12, 10], [12, 11], [12, 12], [12, 13], [12, 14], [12, 15]]}, {"word": "CHAIR", "definition": "The person who moderates debate and applies the rules of procedure.", "cells": [[3, 13], [3, 14], [3, 15], [3, 16], [3, 17]]}, {"word": "AGENDA", "definition": "The topic or order of topics that the committee will discuss.", "cells": [[9, 17], [8, 16], [7, 15], [6, 14], [5, 13], [4, 12]]}, {"word": "QUORUM", "definition": "The minimum number of delegates needed for debate or voting to take place.", "cells": [[4, 18], [4, 17], [4, 16], [4, 15], [4, 14], [4, 13]]}, {"word": "YIELD", "definition": "To give remaining speaking time to another delegate or back to the Chair.", "cells": [[4, 5], [3, 6], [2, 7], [1, 8], [0, 9]]}, {"word": "LOBBYING", "definition": "Informal persuasion and negotiation used to gain support for ideas.", "cells": [[15, 3], [14, 3], [13, 3], [12, 3], [11, 3], [10, 3], [9, 3], [8, 3]]}, {"word": "BLOC", "definition": "A group of delegations with similar views or interests.", "cells": [[11, 11], [10, 12], [9, 13], [8, 14]]}, {"word": "VOTE", "definition": "The formal way delegates make a decision.", "cells": [[5, 4], [5, 5], [5, 6], [5, 7]]}, {"word": "SPEECH", "definition": "A formal address delivered by a delegate during debate.", "cells": [[5, 15], [6, 15], [7, 15], [8, 15], [9, 15], [10, 15]]}, {"word": "SIGNATORY", "definition": "A delegation that supports discussing a draft resolution, without necessarily agreeing with it.", "cells": [[3, 11], [4, 10], [5, 9], [6, 8], [7, 7], [8, 6], [9, 5], [10, 4], [11, 3]]}, {"word": "SPONSOR", "definition": "A main writer or strong supporter of a draft resolution.", "cells": [[9, 11], [8, 12], [7, 13], [6, 14], [5, 15], [4, 16], [3, 17]]}, {"word": "OPERATIVE", "definition": "A type of clause that states actions, recommendations, or solutions.", "cells": [[3, 7], [4, 7], [5, 7], [6, 7], [7, 7], [8, 7], [9, 7], [10, 7], [11, 7]]}, {"word": "PREAMBULATORY", "definition": "A type of clause that gives background, reasons, and context.", "cells": [[13, 5], [13, 6], [13, 7], [13, 8], [13, 9], [13, 10], [13, 11], [13, 12], [13, 13], [13, 14], [13, 15], [13, 16], [13, 17]]}, {"word": "DEBATE", "definition": "The formal discussion of a topic in committee.", "cells": [[17, 18], [16, 17], [15, 16], [14, 15], [13, 14], [12, 13]]}, {"word": "COMMITTEE", "definition": "The group of delegates assigned to discuss a specific topic or area.", "cells": [[8, 14], [7, 13], [6, 12], [5, 11], [4, 10], [3, 9], [2, 8], [1, 7], [0, 6]]}, {"word": "AMBASSADOR", "definition": "The head delegate who represents the whole delegation.", "cells": [[13, 13], [12, 12], [11, 11], [10, 10], [9, 9], [8, 8], [7, 7], [6, 6], [5, 5], [4, 4]]}, {"word": "SOVEREIGNTY", "definition": "A state’s authority to govern itself and make its own decisions.", "cells": [[17, 6], [16, 6], [15, 6], [14, 6], [13, 6], [12, 6], [11, 6], [10, 6], [9, 6], [8, 6], [7, 6]]}, {"word": "DIPLOMACY", "definition": "The practice of managing relations and negotiations between states.", "cells": [[2, 5], [3, 6], [4, 7], [5, 8], [6, 9], [7, 10], [8, 11], [9, 12], [10, 13]]}, {"word": "CONSENSUS", "definition": "General agreement reached without strong objection.", "cells": [[1, 3], [2, 4], [3, 5], [4, 6], [5, 7], [6, 8], [7, 9], [8, 10], [9, 11]]}];
+
+    const rows = gridLetters.length;
+    const cols = gridLetters[0].length;
+    const gridEl = document.getElementById("grid");
+    const foundPill = document.getElementById("foundPill");
+    const definitionText = document.getElementById("definitionText");
+    const definitionList = document.getElementById("definitionList");
+    const emptyNote = document.getElementById("emptyNote");
+    const completeEl = document.getElementById("complete");
+    const resetBtn = document.getElementById("resetBtn");
+    const hintBtn = document.getElementById("hintBtn");
+
+    const termsByWord = new Map(hiddenTerms.map(item => [item.word, item]));
+    const foundWords = new Set();
+    const foundCells = new Set();
+    const unlockedDefinitions = [];
+
+    let isSelecting = false;
+    let startCell = null;
+    let currentSelection = [];
+
+    function key(row, col) { return `${row}-${col}`; }
+
+    function cellAt(row, col) {
+      return document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+    }
+
+    function renderGrid() {
+      gridEl.innerHTML = "";
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.textContent = gridLetters[r][c];
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.setAttribute("aria-label", `row ${r + 1}, column ${c + 1}, letter ${gridLetters[r][c]}`);
+          gridEl.appendChild(cell);
+        }
+      }
+    }
+
+    function updateProgress() {
+      foundPill.textContent = `Found: ${foundWords.size} / ${hiddenTerms.length}`;
+      completeEl.style.display = foundWords.size === hiddenTerms.length ? "block" : "none";
+      emptyNote.style.display = unlockedDefinitions.length ? "none" : "block";
+    }
+
+    function renderDefinitions() {
+      definitionList.innerHTML = "";
+      unlockedDefinitions.forEach((definition, index) => {
+        const li = document.createElement("li");
+        li.textContent = `${index + 1}. ${definition}`;
+        definitionList.prepend(li);
+      });
+    }
+
+    function clearSelection() {
+      document.querySelectorAll(".cell.selected").forEach(cell => cell.classList.remove("selected"));
+      currentSelection = [];
+    }
+
+    function refreshFoundCells() {
+      document.querySelectorAll(".cell").forEach(cell => {
+        cell.classList.toggle("found", foundCells.has(key(Number(cell.dataset.row), Number(cell.dataset.col))));
+      });
+    }
+
+    function lineCells(start, end) {
+      const dr = end.row - start.row;
+      const dc = end.col - start.col;
+      const stepR = Math.sign(dr);
+      const stepC = Math.sign(dc);
+      const horizontal = dr === 0 && dc !== 0;
+      const vertical = dc === 0 && dr !== 0;
+      const diagonal = Math.abs(dr) === Math.abs(dc) && dr !== 0;
+      if (!horizontal && !vertical && !diagonal) return [];
+      const length = Math.max(Math.abs(dr), Math.abs(dc));
+      const cells = [];
+      for (let i = 0; i <= length; i++) {
+        cells.push({ row: start.row + stepR * i, col: start.col + stepC * i });
+      }
+      return cells;
+    }
+
+    function applySelection(cells) {
+      clearSelection();
+      currentSelection = cells;
+      cells.forEach(({ row, col }) => {
+        const cell = cellAt(row, col);
+        if (cell) cell.classList.add("selected");
+      });
+    }
+
+    function lettersFrom(cells) {
+      return cells.map(({ row, col }) => gridLetters[row][col]).join("");
+    }
+
+    function unlock(word, cells) {
+      if (foundWords.has(word)) return;
+      const term = termsByWord.get(word);
+      foundWords.add(word);
+      cells.forEach(({ row, col }) => foundCells.add(key(row, col)));
+      unlockedDefinitions.push(term.definition);
+      definitionText.textContent = term.definition;
+      clearSelection();
+      refreshFoundCells();
+      renderDefinitions();
+      updateProgress();
+    }
+
+    function finishSelection() {
+      if (!currentSelection.length) return clearSelection();
+      const attempt = lettersFrom(currentSelection);
+      const reversed = attempt.split("").reverse().join("");
+      if (termsByWord.has(attempt) && !foundWords.has(attempt)) {
+        unlock(attempt, currentSelection);
+      } else if (termsByWord.has(reversed) && !foundWords.has(reversed)) {
+        unlock(reversed, [...currentSelection].reverse());
+      } else {
+        clearSelection();
+      }
+      isSelecting = false;
+      startCell = null;
+    }
+
+    function cellFromPoint(x, y) {
+      const el = document.elementFromPoint(x, y);
+      return el && el.classList.contains("cell") ? el : null;
+    }
+
+    gridEl.addEventListener("pointerdown", event => {
+      const cell = event.target.closest(".cell");
+      if (!cell) return;
+      event.preventDefault();
+      gridEl.setPointerCapture(event.pointerId);
+      isSelecting = true;
+      startCell = { row: Number(cell.dataset.row), col: Number(cell.dataset.col) };
+      applySelection([startCell]);
+    });
+
+    gridEl.addEventListener("pointermove", event => {
+      if (!isSelecting || !startCell) return;
+      event.preventDefault();
+      const cell = cellFromPoint(event.clientX, event.clientY);
+      if (!cell) return;
+      const endCell = { row: Number(cell.dataset.row), col: Number(cell.dataset.col) };
+      const cells = lineCells(startCell, endCell);
+      if (cells.length) applySelection(cells);
+    });
+
+    gridEl.addEventListener("pointerup", event => {
+      if (!isSelecting) return;
+      event.preventDefault();
+      finishSelection();
+    });
+
+    gridEl.addEventListener("pointercancel", () => {
+      isSelecting = false;
+      startCell = null;
+      clearSelection();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      foundWords.clear();
+      foundCells.clear();
+      unlockedDefinitions.length = 0;
+      definitionText.textContent = "No definitions unlocked yet.";
+      clearSelection();
+      refreshFoundCells();
+      renderDefinitions();
+      updateProgress();
+    });
+
+    hintBtn.addEventListener("click", () => {
+      const remaining = hiddenTerms.filter(item => !foundWords.has(item.word));
+      if (!remaining.length) return;
+      const item = remaining[Math.floor(Math.random() * remaining.length)];
+      const first = item.cells[0];
+      const firstCell = cellAt(first[0], first[1]);
+      if (!firstCell) return;
+      firstCell.classList.add("hint");
+      definitionText.textContent = "Hint: one hidden word starts on the flashing letter.";
+      setTimeout(() => {
+        firstCell.classList.remove("hint");
+        if (unlockedDefinitions.length) definitionText.textContent = unlockedDefinitions[unlockedDefinitions.length - 1];
+        else definitionText.textContent = "No definitions unlocked yet.";
+      }, 2300);
+    });
+
+    renderGrid();
+    updateProgress();
+  </script>
+</body>
+</html>
